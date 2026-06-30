@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ETF期权学习曲线 · 基金经理工作台</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    background: #f5f5f0;
+    color: #1a1a1a;
+    font-size: 14px;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  /* Header */
+  .header {
+    background: #fff;
+    border-bottom: 0.5px solid rgba(0,0,0,0.12);
+    padding: 0 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 60px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .header-left { display: flex; align-items: center; gap: 12px; }
+  .logo-mark {
+    width: 32px; height: 32px; border-radius: 8px;
+    background: #1a3a6b;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 13px; font-weight: 500; letter-spacing: 0.5px;
+  }
+  .header-title { font-size: 15px; font-weight: 500; color: #1a1a1a; }
+  .header-subtitle { font-size: 12px; color: #888; margin-top: 1px; }
+  .header-right { display: flex; align-items: center; gap: 8px; }
+  .tab-btn {
+    padding: 6px 16px; border-radius: 6px; border: 0.5px solid rgba(0,0,0,0.15);
+    background: transparent; cursor: pointer; font-size: 13px; color: #555;
+    transition: all 0.15s;
+  }
+  .tab-btn.active { background: #1a3a6b; color: #fff; border-color: #1a3a6b; }
+  .tab-btn:hover:not(.active) { background: #f0f0f0; }
+
+  /* Main */
+  .main { max-width: 1100px; margin: 0 auto; padding: 28px 24px; }
+
+  /* Section */
+  .section { margin-bottom: 24px; }
+  .section-title {
+    font-size: 13px; font-weight: 500; color: #666;
+    text-transform: uppercase; letter-spacing: 0.8px;
+    margin-bottom: 12px;
+  }
+
+  /* Cards */
+  .card {
+    background: #fff;
+    border-radius: 12px;
+    border: 0.5px solid rgba(0,0,0,0.10);
+    padding: 20px 24px;
+  }
+
+  /* Metric Cards */
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0,1fr));
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .metric-card { background: #f8f8f5; border-radius: 8px; padding: 14px 16px; }
+  .metric-label { font-size: 12px; color: #888; margin-bottom: 4px; }
+  .metric-value { font-size: 22px; font-weight: 500; color: #1a1a1a; }
+  .metric-value.up { color: #c0392b; }
+  .metric-value.down { color: #27ae60; }
+  .metric-value.neutral { color: #1a3a6b; }
+  .metric-change { font-size: 12px; color: #aaa; margin-top: 2px; }
+
+  /* Chart */
+  .chart-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .chart-title { font-size: 14px; font-weight: 500; }
+  .chart-legend { display: flex; gap: 16px; font-size: 12px; color: #888; align-items: center; }
+  .legend-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 4px; }
+  .chart-wrapper { position: relative; width: 100%; height: 280px; }
+
+  /* Position */
+  .position-section { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .position-bar-container { margin: 16px 0 8px; }
+  .position-bar-track { height: 12px; border-radius: 6px; background: #f0f0ea; overflow: hidden; }
+  .position-bar-fill { height: 100%; border-radius: 6px; background: #1a3a6b; transition: width 0.5s ease; }
+  .position-bar-fill.warning { background: #c0392b; }
+  .position-labels { display: flex; justify-content: space-between; font-size: 12px; color: #aaa; margin-top: 6px; }
+  .position-ratio { font-size: 28px; font-weight: 500; color: #1a1a1a; margin: 12px 0 4px; }
+
+  /* Form */
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 12px; align-items: end; }
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  .form-label { font-size: 12px; color: #888; font-weight: 500; }
+  .form-input {
+    padding: 8px 12px; border-radius: 8px;
+    border: 0.5px solid rgba(0,0,0,0.18);
+    background: #fff; font-size: 13px; color: #1a1a1a;
+    width: 100%; outline: none;
+    transition: border-color 0.15s;
+  }
+  .form-input:focus { border-color: #1a3a6b; }
+  .form-input[type="date"] { font-size: 13px; }
+  .btn-primary {
+    padding: 8px 20px; border-radius: 8px;
+    background: #1a3a6b; color: #fff; border: none;
+    font-size: 13px; font-weight: 500; cursor: pointer;
+    white-space: nowrap; transition: background 0.15s;
+    height: 37px;
+  }
+  .btn-primary:hover { background: #142e56; }
+  .btn-danger {
+    padding: 4px 10px; border-radius: 6px;
+    background: transparent; color: #c0392b;
+    border: 0.5px solid rgba(192,57,43,0.4);
+    font-size: 12px; cursor: pointer;
+  }
+  .btn-danger:hover { background: rgba(192,57,43,0.06); }
+  .pos-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: end; }
+
+  /* Textarea */
+  .commentary-textarea {
+    width: 100%; min-height: 120px; padding: 12px;
+    border-radius: 8px; border: 0.5px solid rgba(0,0,0,0.18);
+    font-size: 13px; color: #1a1a1a; resize: vertical; outline: none;
+    font-family: inherit; line-height: 1.7;
+    transition: border-color 0.15s;
+  }
+  .commentary-textarea:focus { border-color: #1a3a6b; }
+  .commentary-actions {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: 10px;
+  }
+  .commentary-hint { font-size: 12px; color: #aaa; }
+
+  /* History Table */
+  .history-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .history-table th {
+    text-align: left; padding: 8px 12px;
+    font-size: 11px; font-weight: 500; color: #aaa;
+    border-bottom: 0.5px solid rgba(0,0,0,0.10);
+    letter-spacing: 0.5px; text-transform: uppercase;
+  }
+  .history-table td { padding: 10px 12px; border-bottom: 0.5px solid rgba(0,0,0,0.06); color: #333; }
+  .history-table tr:last-child td { border-bottom: none; }
+  .history-table tr:hover td { background: #fafaf8; }
+  .change-up { color: #c0392b; font-weight: 500; }
+  .change-down { color: #27ae60; font-weight: 500; }
+  .change-zero { color: #aaa; }
+
+  /* Commentary List */
+  .commentary-list { display: flex; flex-direction: column; gap: 12px; }
+  .commentary-item {
+    border-left: 3px solid #1a3a6b;
+    padding: 10px 14px;
+    background: #f8f8f5;
+    border-radius: 0 8px 8px 0;
+  }
+  .commentary-item-date { font-size: 11px; color: #aaa; margin-bottom: 4px; }
+  .commentary-item-text { font-size: 13px; color: #333; white-space: pre-wrap; line-height: 1.7; }
+
+  /* Views */
+  .view { display: none; }
+  .view.active { display: block; }
+
+  /* Empty */
+  .empty-state { text-align: center; padding: 40px; color: #ccc; font-size: 13px; }
+
+  /* Toast */
+  .toast {
+    position: fixed; bottom: 24px; right: 24px;
+    background: #1a3a6b; color: #fff;
+    padding: 10px 18px; border-radius: 8px;
+    font-size: 13px; opacity: 0;
+    transform: translateY(8px);
+    transition: all 0.25s; pointer-events: none; z-index: 999;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+
+  /* Publish box */
+  .publish-box {
+    border: 0.5px solid rgba(26,58,107,0.3);
+    background: #fafbff;
+    border-radius: 12px;
+    padding: 20px 24px;
+  }
+
+  @media (max-width: 700px) {
+    .metrics-grid { grid-template-columns: 1fr 1fr; }
+    .form-grid { grid-template-columns: 1fr 1fr; }
+    .position-section { grid-template-columns: 1fr; }
+    .pos-form-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-left">
+    <div class="logo-mark">净值</div>
+    <div>
+      <div class="header-title">ETF期权学习曲线</div>
+      <div class="header-subtitle" id="headerDate">基金经理工作台</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <button class="tab-btn active" onclick="switchView(event,'dashboard')">汇报视图</button>
+    <button class="tab-btn" onclick="switchView(event,'input')">数据录入</button>
+    <button class="tab-btn" onclick="switchView(event,'history')">历史记录</button>
+  </div>
+</header>
+
+<div class="main">
+
+  <!-- ========================== 汇报视图 ========================== -->
+  <div id="view-dashboard" class="view active">
+
+    <div class="metrics-grid">
+      <div class="metric-card">
+        <div class="metric-label">最新净值</div>
+        <div class="metric-value neutral" id="metricNAV">—</div>
+        <div class="metric-change" id="metricNAVDate">暂无数据</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">累计收益率</div>
+        <div class="metric-value" id="metricTotal">—</div>
+        <div class="metric-change">相较初始净值 1.0000</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">本周涨跌幅</div>
+        <div class="metric-value" id="metricWeek">—</div>
+        <div class="metric-change" id="metricWeekDate">暂无数据</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">当前仓位</div>
+        <div class="metric-value neutral" id="metricPosition">—</div>
+        <div class="metric-change" id="metricPositionDetail">暂无数据</div>
+      </div>
+    </div>
+
+    <div class="card section">
+      <div class="chart-header">
+        <div class="chart-title">净值走势</div>
+        <div class="chart-legend">
+          <span><span class="legend-dot" style="background:#1a3a6b;"></span>单位净值</span>
+          <span><span class="legend-dot" style="background:#e8e8e0; border: 1px solid #ccc;"></span>基准线 1.0</span>
+        </div>
+      </div>
+      <div class="chart-wrapper">
+        <canvas id="navChart" role="img" aria-label="基金净值走势折线图">暂无净值数据</canvas>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">仓位状况</div>
+      <div class="card">
+        <div class="position-section">
+          <div>
+            <div style="font-size:13px; color:#888; margin-bottom:4px;">已用仓位</div>
+            <div class="position-ratio" id="posRatio">—</div>
+            <div class="position-bar-container">
+              <div class="position-bar-track">
+                <div class="position-bar-fill" id="posBar" style="width:0%"></div>
+              </div>
+            </div>
+            <div class="position-labels">
+              <span>空仓 0%</span>
+              <span>满仓 100%</span>
+            </div>
+          </div>
+          <div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; height:100%; align-content:center;">
+              <div class="metric-card">
+                <div class="metric-label">总资产</div>
+                <div class="metric-value neutral" style="font-size:18px;" id="posTotalVal">—</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">剩余可用</div>
+                <div class="metric-value neutral" style="font-size:18px;" id="posAvailVal">—</div>
+              </div>
+              <div class="metric-card" style="grid-column: 1/-1;">
+                <div class="metric-label">已用资金</div>
+                <div class="metric-value" style="font-size:18px;" id="posUsedVal">—</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">本周操作思路</div>
+      <div class="card" id="latestCommentary">
+        <div class="empty-state">暂无本周操作思路</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ========================== 数据录入 ========================== -->
+  <div id="view-input" class="view">
+
+    <div class="section">
+      <div class="section-title">录入当周净值</div>
+      <div class="card">
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">日期（通常为周五）</label>
+            <input type="date" id="inputDate" class="form-input">
+          </div>
+          <div class="form-group">
+            <label class="form-label">当日总市值（元）</label>
+            <input type="number" id="inputMarketValue" class="form-input" placeholder="如 156870" step="0.01">
+          </div>
+          <div class="form-group">
+            <label class="form-label">初始规模（元）</label>
+            <input type="number" id="inputInitValue" class="form-input" placeholder="首次录入后自动记忆" step="0.01">
+          </div>
+          <button class="btn-primary" onclick="addNAVRecord()">添加净值</button>
+        </div>
+        <div style="margin-top:12px; font-size:12px; color:#aaa;">
+          净值 = 当日总市值 ÷ 初始规模。初始规模首次填写后将自动保存，后续无需重复填写。
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">更新当前仓位</div>
+      <div class="card">
+        <div class="pos-form-grid">
+          <div class="form-group">
+            <label class="form-label">总资产（元）</label>
+            <input type="number" id="inputTotalAsset" class="form-input" placeholder="如 156870" step="0.01">
+          </div>
+          <div class="form-group">
+            <label class="form-label">剩余可用资金（元）</label>
+            <input type="number" id="inputAvailAsset" class="form-input" placeholder="如 102740" step="0.01">
+          </div>
+        </div>
+        <div style="margin-top:12px;">
+          <button class="btn-primary" onclick="updatePosition()">更新仓位</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">本周操作思路</div>
+      <div class="card">
+        <div class="form-group" style="margin-bottom:12px;">
+          <label class="form-label">汇报日期</label>
+          <input type="date" id="commentDate" class="form-input" style="max-width:200px;">
+        </div>
+        <textarea class="commentary-textarea" id="commentText"
+          placeholder="请在此输入本周净值变化原因及操作思路..."></textarea>
+        <div class="commentary-actions">
+          <span class="commentary-hint">支持换行，内容保存在本地浏览器中</span>
+          <button class="btn-primary" onclick="saveCommentary()">保存本周思路</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ========================== 历史记录 ========================== -->
+  <div id="view-history" class="view">
+
+    <div class="section">
+      <div class="section-title">净值历史记录</div>
+      <div class="card">
+        <table class="history-table" id="navHistoryTable">
+          <thead>
+            <tr>
+              <th>日期</th>
+              <th>市值（元）</th>
+              <th>单位净值</th>
+              <th>涨跌幅</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="navHistoryBody">
+            <tr><td colspan="5" style="text-align:center;color:#ccc;padding:30px;">暂无净值记录</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">历史操作思路</div>
+      <div class="card" id="commentaryHistory">
+        <div class="empty-state">暂无历史操作思路</div>
+      </div>
+    </div>
+
+    <!-- 发布 -->
+    <div class="section">
+      <div class="section-title">发布到投资者页面</div>
+      <div class="publish-box">
+        <div style="font-size:13px;color:#555;line-height:1.8;margin-bottom:12px;">
+          点击下方按钮导出发布包（JSON文件），然后发给助理，助理会帮你更新投资者页面：<br>
+          <strong>https://yafen-wang.github.io/etf-fund-report/</strong>
+        </div>
+        <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:center;">
+          <button class="btn-primary" onclick="exportData()" style="height:40px;font-size:14px;">导出发布包</button>
+          <span style="font-size:12px;color:#999;">下载后发送给助理即可</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 数据管理 -->
+    <div class="section">
+      <div class="section-title">数据管理</div>
+      <div class="card">
+        <div style="display:flex; gap:12px; flex-wrap:wrap;">
+          <button class="btn-primary" onclick="exportData()">导出数据（JSON）</button>
+          <button class="btn-primary" onclick="document.getElementById('importFile').click()">导入数据</button>
+          <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
+          <button class="btn-danger" onclick="clearAllData()">清空所有数据</button>
+        </div>
+        <div style="font-size:12px;color:#aaa;margin-top:10px;">数据存储在本地浏览器，建议定期导出备份。可通过导入功能恢复数据。</div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================================
+//  DATA STORE — 预置历史数据
+// ============================================================
+const DEFAULT_DATA = {"navRecords":[{"date":"2026-05-15","marketValue":150000,"nav":1},{"date":"2026-05-22","marketValue":151000,"nav":1.0066666666666666},{"date":"2026-05-29","marketValue":146612.2,"nav":0.9774146666666668},{"date":"2026-06-05","marketValue":149027.4,"nav":0.993516},{"date":"2026-06-12","marketValue":152797.7,"nav":1.0186513333333334},{"date":"2026-06-19","marketValue":154976.8,"nav":1.0331786666666667},{"date":"2026-06-26","marketValue":156870,"nav":1.0458}],"initScale":150000,"position":{"total":156870,"avail":102740,"updatedAt":"2026/6/29"},"commentaries":[{"date":"2026-06-26","text":"本周周三周四大涨后，周五一早平了sell put，提前锁定85%的收益，后续有机会跌了再重新开仓；同时一早开了3张put，赌市场调整，周五大跌，也有所盈利。目前整体的策略就是sell put为主，打安全垫，在胜率比较高的时候在开仓买单。"},{"date":"2026-06-19","text":"借着涨势，提前把sell put获利了结了，然后周二看大涨开了空单，博个下跌，如果没跌期权费合计损失556；同时开了一张sell call，7月没涨过9.75就能收到期权费，作为尝试。牛市行情中，还是以sell put（不看空）为主，目前仓位低，下周行情有下跌，再开仓7月的sell put，sell call慎做，"},{"date":"2026-06-12","text":"本周参与了几笔择时的买单。周一大跌，平了空单微赚，后来又开了多单，结果周一大跌买坑里了。周二反弹，但因在办公室无法操作，错过卖点，周三周四下跌，浮亏较大，周五大涨迎来反转，扭亏为盈，平仓后见涨幅较大，开了空单，下午平了，有所盈利，并在大跌的时候又卖了一张sell put，也微转。整体来说，本周的买单最终都盈利，但中间波动较大，需要多盯盘。后续还是以sell put为主，在没有明确机会   明确方向的时候，宁愿空仓，有比较确定的机会再实弹参与买盘。"},{"date":"2026-06-06","text":"学习：现在大致理解，期权的卖方，收保费，可以大概率收小钱，但是保证金制，只能用到五成仓位，所以算起来年化收益10-15%左右吧，还要预防极端风险，确实跟雪球类似；期权的买方，就是赌方向，但是这个就需要实时盯盘，没有明确观点时候不开买单，宁可空仓。\n本周操作：之前基于牛市逻辑，尝试开了6张买单，权利金一万左右，6月3日趁周中反弹平仓2单，目前权利金6800左右，浮亏5500，大概率持有到6月24日看有没有反弹，否则就是下跌+时间价值损耗亏没；本周跟朋友小仓位尝试买了3单空单，都是次日平仓，两千元左右单日收益均超过10%；之前开的sell put在本周震荡市中逐步吃到时间价值。\n下周计划：美股有了大的调整，下周A股可能也会跟着有个较大的调整，所以计划在周一将原来的卖单止盈，低点重新开单；跟着朋友的节奏，开几张空单"},{"date":"2026-05-30","text":"目前已开仓6月24日，中证500ETF的三个不同执行价【7.75、7.5、7.250】的卖出认沽期权，预计可收入权利金合计2458，中证500目前的价格是8.443，还有10+%的空间，目前这些义务仓收益持平，到6月24日，没有跌破执行价，就能收到权利金，中间如果跌幅较大，浮亏达到权利金的两倍就会止损。\n本周因指数下跌较多，开仓了6月24日的认购期权，就是赌市场反弹，大概1万元左右，目前浮亏3000，如果市场没有反弹，或者反弹太慢，被时间价值损耗掉了，就会形成实际亏损；如果有比较大的反弹，计划收益20%左右止盈。"}]};
+
+const STORAGE_KEY = 'etf_fund_report_v2';
+
+let store = {
+  navRecords: [],
+  initScale: null,
+  position: { total: null, avail: null, updatedAt: null },
+  commentaries: []
+};
+
+function loadStore() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      store = JSON.parse(saved);
+    } else {
+      // 首次打开，加载预置数据
+      store = JSON.parse(JSON.stringify(DEFAULT_DATA));
+      saveStore();
+    }
+  } catch(e) {
+    store = JSON.parse(JSON.stringify(DEFAULT_DATA));
+    saveStore();
+  }
+  if (!store.position) store.position = { total: null, avail: null, updatedAt: null };
+  if (!store.commentaries) store.commentaries = [];
+  if (!store.navRecords) store.navRecords = [];
+}
+
+function saveStore() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
+}
+
+// ============================================================
+//  UTILS
+// ============================================================
+function showToast(msg, duration = 2200) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), duration);
+}
+
+function fmtMoney(v) {
+  if (v == null || isNaN(v)) return '—';
+  return new Intl.NumberFormat('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v) + ' 元';
+}
+function fmtNAV(v) {
+  if (v == null || isNaN(v)) return '—';
+  return v.toFixed(4);
+}
+function fmtPct(v) {
+  if (v == null || isNaN(v)) return '—';
+  return (v >= 0 ? '+' : '') + (v * 100).toFixed(2) + '%';
+}
+function todayStr() {
+  return new Date().toISOString().slice(0, 10);
+}
+function escHtml(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ============================================================
+//  NAV RECORDS
+// ============================================================
+function addNAVRecord() {
+  const date = document.getElementById('inputDate').value;
+  const mv = parseFloat(document.getElementById('inputMarketValue').value);
+  const initStr = document.getElementById('inputInitValue').value;
+
+  if (!date) { showToast('请选择日期'); return; }
+  if (isNaN(mv) || mv <= 0) { showToast('请输入有效市值'); return; }
+
+  if (initStr && !isNaN(parseFloat(initStr))) {
+    if (!store.initScale) {
+      store.initScale = parseFloat(initStr);
+    }
+  }
+  if (!store.initScale) { showToast('请输入初始规模（首次录入时需要）'); return; }
+
+  const nav = mv / store.initScale;
+
+  const idx = store.navRecords.findIndex(r => r.date === date);
+  if (idx >= 0) {
+    store.navRecords[idx] = { date, marketValue: mv, nav };
+    showToast('已更新 ' + date + ' 的净值记录');
+  } else {
+    store.navRecords.push({ date, marketValue: mv, nav });
+    store.navRecords.sort((a, b) => a.date.localeCompare(b.date));
+    showToast('净值记录已添加');
+  }
+
+  saveStore();
+  document.getElementById('inputMarketValue').value = '';
+  document.getElementById('inputInitValue').value = '';
+  refreshAll();
+}
+
+function deleteNAV(date) {
+  if (!confirm('确认删除 ' + date + ' 的净值记录？')) return;
+  store.navRecords = store.navRecords.filter(r => r.date !== date);
+  saveStore();
+  refreshAll();
+  showToast('已删除');
+}
+
+// ============================================================
+//  POSITION
+// ============================================================
+function updatePosition() {
+  const total = parseFloat(document.getElementById('inputTotalAsset').value);
+  const avail = parseFloat(document.getElementById('inputAvailAsset').value);
+  if (isNaN(total) || total <= 0) { showToast('请输入有效总资产'); return; }
+  if (isNaN(avail) || avail < 0) { showToast('请输入有效可用资金'); return; }
+  if (avail > total) { showToast('可用资金不能大于总资产'); return; }
+  store.position = { total, avail, updatedAt: new Date().toLocaleDateString('zh-CN') };
+  saveStore();
+  document.getElementById('inputTotalAsset').value = '';
+  document.getElementById('inputAvailAsset').value = '';
+  refreshAll();
+  showToast('仓位已更新');
+}
+
+// ============================================================
+//  COMMENTARY
+// ============================================================
+function saveCommentary() {
+  const date = document.getElementById('commentDate').value;
+  const text = document.getElementById('commentText').value.trim();
+  if (!date) { showToast('请选择汇报日期'); return; }
+  if (!text) { showToast('请输入操作思路内容'); return; }
+  const idx = store.commentaries.findIndex(c => c.date === date);
+  if (idx >= 0) {
+    store.commentaries[idx].text = text;
+    showToast('已更新本周操作思路');
+  } else {
+    store.commentaries.push({ date, text });
+    store.commentaries.sort((a, b) => b.date.localeCompare(a.date));
+    showToast('操作思路已保存');
+  }
+  saveStore();
+  document.getElementById('commentText').value = '';
+  refreshAll();
+}
+
+function deleteCommentary(date) {
+  if (!confirm('确认删除 ' + date + ' 的操作思路？')) return;
+  store.commentaries = store.commentaries.filter(c => c.date !== date);
+  saveStore();
+  refreshAll();
+  showToast('已删除');
+}
+
+// ============================================================
+//  CHART
+// ============================================================
+let navChartInstance = null;
+
+function renderChart() {
+  const recs = store.navRecords;
+  const canvas = document.getElementById('navChart');
+  if (navChartInstance) { navChartInstance.destroy(); navChartInstance = null; }
+
+  if (recs.length === 0) return;
+
+  const labels = recs.map(r => r.date);
+  const data = recs.map(r => parseFloat(r.nav.toFixed(4)));
+  const allValues = [...data, 1.0];
+  const minVal = Math.min.apply(null, allValues);
+  const yMin = Math.floor(Math.min(0.9, minVal - 0.01) * 100) / 100;
+
+  navChartInstance = new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: '单位净值',
+          data,
+          borderColor: '#1a3a6b',
+          backgroundColor: 'rgba(26,58,107,0.07)',
+          borderWidth: 2,
+          pointRadius: 4,
+          pointBackgroundColor: '#1a3a6b',
+          pointBorderColor: '#fff',
+          pointBorderWidth: 1.5,
+          fill: true,
+          tension: 0.3
+        },
+        {
+          label: '基准线',
+          data: recs.map(() => 1.0),
+          borderColor: '#d0d0c8',
+          borderWidth: 1,
+          borderDash: [4, 4],
+          pointRadius: 0,
+          fill: false,
+          tension: 0
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#fff',
+          titleColor: '#333',
+          bodyColor: '#555',
+          borderColor: '#e0e0d8',
+          borderWidth: 1,
+          padding: 10,
+          callbacks: {
+            label: ctx => {
+              if (ctx.datasetIndex === 0) return ' 净值: ' + ctx.parsed.y.toFixed(4);
+              return ' 基准: ' + ctx.parsed.y.toFixed(4);
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { color: 'rgba(0,0,0,0.04)' },
+          ticks: { color: '#aaa', font: { size: 11 }, maxRotation: 45, autoSkip: true, maxTicksLimit: 10 }
+        },
+        y: {
+          min: yMin,
+          grid: { color: 'rgba(0,0,0,0.06)' },
+          ticks: { color: '#aaa', font: { size: 11 }, callback: v => v.toFixed(3) }
+        }
+      }
+    }
+  });
+}
+
+// ============================================================
+//  REFRESH UI
+// ============================================================
+function refreshAll() {
+  refreshMetrics();
+  renderChart();
+  renderPosition();
+  renderLatestCommentary();
+  renderNavHistory();
+  renderCommentaryHistory();
+}
+
+function refreshMetrics() {
+  const recs = store.navRecords;
+  if (recs.length === 0) {
+    ['metricNAV','metricTotal','metricWeek'].forEach(id => {
+      document.getElementById(id).textContent = '—';
+    });
+    document.getElementById('metricNAVDate').textContent = '暂无数据';
+    return;
+  }
+
+  const latest = recs[recs.length - 1];
+  const navEl = document.getElementById('metricNAV');
+  navEl.textContent = fmtNAV(latest.nav);
+  navEl.className = 'metric-value ' + (latest.nav > 1 ? 'up' : latest.nav < 1 ? 'down' : 'neutral');
+  document.getElementById('metricNAVDate').textContent = latest.date;
+
+  const totalRet = latest.nav - 1;
+  const totalEl = document.getElementById('metricTotal');
+  totalEl.textContent = fmtPct(totalRet);
+  totalEl.className = 'metric-value ' + (totalRet > 0 ? 'up' : totalRet < 0 ? 'down' : 'neutral');
+
+  const weekEl = document.getElementById('metricWeek');
+  if (recs.length >= 2) {
+    const prev = recs[recs.length - 2];
+    const weekRet = (latest.nav - prev.nav) / prev.nav;
+    weekEl.textContent = fmtPct(weekRet);
+    weekEl.className = 'metric-value ' + (weekRet > 0 ? 'up' : weekRet < 0 ? 'down' : 'neutral');
+    document.getElementById('metricWeekDate').textContent = prev.date + ' → ' + latest.date;
+  } else {
+    weekEl.textContent = '—';
+    weekEl.className = 'metric-value neutral';
+    document.getElementById('metricWeekDate').textContent = '需至少两条记录';
+  }
+}
+
+function renderPosition() {
+  const pos = store.position;
+  const posRatioEl = document.getElementById('posRatio');
+  const posBarEl = document.getElementById('posBar');
+  const posMetricEl = document.getElementById('metricPosition');
+
+  if (!pos.total) {
+    posRatioEl.textContent = '—';
+    posMetricEl.textContent = '—';
+    document.getElementById('metricPositionDetail').textContent = '暂无数据';
+    document.getElementById('posTotalVal').textContent = '—';
+    document.getElementById('posAvailVal').textContent = '—';
+    document.getElementById('posUsedVal').textContent = '—';
+    return;
+  }
+
+  const used = pos.total - pos.avail;
+  const ratio = used / pos.total;
+  const pct = (ratio * 100).toFixed(1) + '%';
+
+  posRatioEl.textContent = pct;
+  posBarEl.style.width = Math.min(ratio * 100, 100) + '%';
+  posBarEl.className = 'position-bar-fill' + (ratio > 0.85 ? ' warning' : '');
+
+  posMetricEl.textContent = pct;
+  posMetricEl.className = 'metric-value ' + (ratio > 0.85 ? 'up' : 'neutral');
+  document.getElementById('metricPositionDetail').textContent = pos.updatedAt ? '更新于 ' + pos.updatedAt : '';
+
+  document.getElementById('posTotalVal').textContent = fmtMoney(pos.total);
+  document.getElementById('posAvailVal').textContent = fmtMoney(pos.avail);
+  document.getElementById('posUsedVal').textContent = fmtMoney(used);
+}
+
+function renderLatestCommentary() {
+  const el = document.getElementById('latestCommentary');
+  if (store.commentaries.length === 0) {
+    el.innerHTML = '<div class="empty-state">暂无本周操作思路</div>';
+    return;
+  }
+  const latest = store.commentaries[0];
+  el.innerHTML = '<div style="font-size:12px;color:#aaa;margin-bottom:8px;">' + latest.date + '</div>' +
+    '<div style="font-size:14px;color:#222;white-space:pre-wrap;line-height:1.8;">' + escHtml(latest.text) + '</div>';
+}
+
+function renderNavHistory() {
+  const tbody = document.getElementById('navHistoryBody');
+  const recs = [...store.navRecords].reverse();
+  if (recs.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#ccc;padding:30px;">暂无净值记录</td></tr>';
+    return;
+  }
+  const all = store.navRecords;
+  tbody.innerHTML = recs.map((r, i) => {
+    const origIdx = all.length - 1 - i;
+    const prev = origIdx > 0 ? all[origIdx - 1] : null;
+    let changeHtml = '<span class="change-zero">—</span>';
+    if (prev) {
+      const chg = (r.nav - prev.nav) / prev.nav;
+      const cls = chg > 0 ? 'change-up' : chg < 0 ? 'change-down' : 'change-zero';
+      changeHtml = '<span class="' + cls + '">' + fmtPct(chg) + '</span>';
+    }
+    return '<tr><td>' + r.date + '</td><td>' + new Intl.NumberFormat('zh-CN').format(r.marketValue) + '</td><td style="font-weight:500">' + fmtNAV(r.nav) + '</td><td>' + changeHtml + '</td><td><button class="btn-danger" onclick="deleteNAV(\'' + r.date + '\')">删除</button></td></tr>';
+  }).join('');
+}
+
+function renderCommentaryHistory() {
+  const el = document.getElementById('commentaryHistory');
+  if (store.commentaries.length === 0) {
+    el.innerHTML = '<div class="empty-state">暂无历史操作思路</div>';
+    return;
+  }
+  el.innerHTML = '<div class="commentary-list">' +
+    store.commentaries.map(c =>
+      '<div class="commentary-item"><div class="commentary-item-date">' + c.date + ' <button class="btn-danger" style="margin-left:8px;" onclick="deleteCommentary(\'' + c.date + '\')">删除</button></div><div class="commentary-item-text">' + escHtml(c.text) + '</div></div>'
+    ).join('') +
+    '</div>';
+}
+
+// ============================================================
+//  VIEW SWITCHING
+// ============================================================
+function switchView(evt, name) {
+  document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+  document.getElementById('view-' + name).classList.add('active');
+  evt.target.classList.add('active');
+  if (name === 'dashboard') renderChart();
+}
+
+// ============================================================
+//  DATA EXPORT / IMPORT / CLEAR
+// ============================================================
+function exportData() {
+  const json = JSON.stringify(store, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'fund_report_' + todayStr() + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('发布包已下载，请发送给助理');
+}
+
+function importData(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      if (!data.navRecords || !Array.isArray(data.navRecords)) {
+        showToast('导入失败：数据格式不正确');
+        return;
+      }
+      store = data;
+      if (!store.position) store.position = { total: null, avail: null, updatedAt: null };
+      if (!store.commentaries) store.commentaries = [];
+      saveStore();
+      refreshAll();
+      showToast('数据导入成功');
+    } catch {
+      showToast('导入失败：文件格式错误');
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+}
+
+function clearAllData() {
+  if (!confirm('确认清空所有数据？此操作不可恢复。')) return;
+  store = { navRecords: [], initScale: null, position: { total: null, avail: null, updatedAt: null }, commentaries: [] };
+  saveStore();
+  refreshAll();
+  showToast('数据已清空');
+}
+
+// ============================================================
+//  INIT
+// ============================================================
+loadStore();
+
+const today = todayStr();
+document.getElementById('inputDate').value = today;
+document.getElementById('commentDate').value = today;
+
+if (store.initScale) {
+  document.getElementById('inputInitValue').placeholder = '已保存: ' + store.initScale + '（无需重填）';
+}
+
+document.getElementById('headerDate').textContent =
+  new Date().toLocaleDateString('zh-CN', { year:'numeric', month:'long', day:'numeric', weekday:'long' });
+
+refreshAll();
+</script>
+</body>
+</html>
