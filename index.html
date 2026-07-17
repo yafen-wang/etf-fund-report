@@ -52,6 +52,18 @@
   .metric-value.neutral { color: #1a3a6b; }
   .metric-change { font-size: 12px; color: #aaa; margin-top: 2px; }
 
+  /* Capital summary */
+  .capital-summary {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0,1fr));
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .capital-item { background: #eef1f6; border-radius: 8px; padding: 12px 16px; }
+  .capital-item .metric-label { font-size: 12px; color: #6a7a93; margin-bottom: 4px; }
+  .capital-item .metric-value { font-size: 20px; color: #1a3a6b; }
+  .capital-item .metric-change { font-size: 12px; color: #9aa7bb; margin-top: 2px; }
+
   /* Section */
   .section { margin-bottom: 24px; }
   .section-title {
@@ -138,6 +150,7 @@
 
   @media (max-width: 700px) {
     .metrics-grid { grid-template-columns: 1fr 1fr; }
+    .capital-summary { grid-template-columns: 1fr 1fr; }
     .position-section { grid-template-columns: 1fr; }
   }
 </style>
@@ -173,6 +186,30 @@
       <div class="metric-label">当前仓位</div>
       <div class="metric-value neutral" id="metricPosition">—</div>
       <div class="metric-change" id="metricPositionDetail"></div>
+    </div>
+  </div>
+
+  <!-- Capital summary -->
+  <div class="capital-summary" id="capitalSummary">
+    <div class="capital-item">
+      <div class="metric-label">初始建仓规模</div>
+      <div class="metric-value" id="capInit">—</div>
+      <div class="metric-change">基金成立时的本金</div>
+    </div>
+    <div class="capital-item">
+      <div class="metric-label">累计追加资金</div>
+      <div class="metric-value" id="capInjected">—</div>
+      <div class="metric-change" id="capInjectedNote">含后续申购份额</div>
+    </div>
+    <div class="capital-item">
+      <div class="metric-label">当前总规模</div>
+      <div class="metric-value" id="capTotal">—</div>
+      <div class="metric-change" id="capTotalNote">含投资收益</div>
+    </div>
+    <div class="capital-item">
+      <div class="metric-label">总投入回收比</div>
+      <div class="metric-value" id="capRecovery">—</div>
+      <div class="metric-change" id="capRecoveryNote">投入 / 当前</div>
     </div>
   </div>
 
@@ -284,7 +321,7 @@
 // ============================================================
 //  DATA — 内嵌数据，每次更新由助理修改此处
 // ============================================================
-let store = {"navRecords":[{"date":"2026-05-15","marketValue":150000,"nav":1},{"date":"2026-05-22","marketValue":151000,"nav":1.0067},{"date":"2026-05-29","marketValue":146612.2,"nav":0.9774},{"date":"2026-06-05","marketValue":149027.4,"nav":0.9935},{"date":"2026-06-12","marketValue":152797.7,"nav":1.0187},{"date":"2026-06-19","marketValue":154976.8,"nav":1.0332},{"date":"2026-06-26","marketValue":156870,"nav":1.0458},{"date":"2026-07-03","marketValue":159561.7,"nav":1.0637},{"date":"2026-07-10","marketValue":162525.5,"nav":1.0835}],"initScale":150000,"position":{"total":162525.5,"avail":54121.38,"updatedAt":"2026/7/10"},"commentaries":[{"date":"2026-07-10","text":"上周三四大跌后，周五开了中证500的buy call（买多），本周一二三指数持续下行，多单亏损，sell put（卖空）的浮盈也降低，导致截至周三的利润只剩下2000元左右，一度觉得买方不能做，就是在赌。好在买方的总亏损是固定的，不会触及本金，所以没有止损，还加仓了几张，同时在周四上午开了科创50的buy call，终于在周四的暴力反弹后，buy call的单子都盈利了，其中科创50一天盈利70%，可惜只买了一张，赚了800+，截至今天，账户净值又创新高。上午将多单都平仓了，锁住了利润，不受下午跳水的影响。整体本周的操作还是比较幸运的。"},{"date":"2026-07-03","text":"买单两次择时正确，贡献了收益；下跌中开了卖单，提高了资金使用率"},{"date":"2026-06-26","text":"本周周三周四大涨后，周五一早平了sell put，提前锁定85%的收益，后续有机会跌了再重新开仓；同时一早开了3张put，赌市场调整，周五大跌，也有所盈利。目前整体的策略就是sell put为主，打安全垫，在胜率比较高的时候在开仓买单。"},{"date":"2026-06-19","text":"借着涨势，提前把sell put获利了结了，然后周二看大涨开了空单，博个下跌，如果没跌期权费合计损失556；同时开了一张sell call，7月没涨过9.75就能收到期权费，作为尝试。牛市行情中，还是以sell put（不看空）为主，目前仓位低，下周行情有下跌，再开仓7月的sell put，sell call慎做，"},{"date":"2026-06-12","text":"本周参与了几笔择时的买单。周一大跌，平了空单微赚，后来又开了多单，结果周一大跌买坑里了。周二反弹，但因在办公室无法操作，错过卖点，周三周四下跌，浮亏较大，周五大涨迎来反转，扭亏为盈，平仓后见涨幅较大，开了空单，下午平了，有所盈利，并在大跌的时候又卖了一张sell put，也微转。整体来说，本周的买单最终都盈利，但中间波动较大，需要多盯盘。后续还是以sell put为主，在没有明确机会   明确方向的时候，宁愿空仓，有比较确定的机会再实弹参与买盘。"},{"date":"2026-06-06","text":"学习：现在大致理解，期权的卖方，收保费，可以大概率收小钱，但是保证金制，只能用到五成仓位，所以算起来年化收益10-15%左右吧，还要预防极端风险，确实跟雪球类似；期权的买方，就是赌方向，但是这个就需要实时盯盘，没有明确观点时候不开买单，宁可空仓。\n本周操作：之前基于牛市逻辑，尝试开了6张买单，权利金一万左右，6月3日趁周中反弹平仓2单，目前权利金6800左右，浮亏5500，大概率持有到6月24日看有没有反弹，否则就是下跌+时间价值损耗亏没；本周跟朋友小仓位尝试买了3单空单，都是次日平仓，两千元左右单日收益均超过10%；之前开的sell put在本周震荡市中逐步吃到时间价值。\n下周计划：美股有了大的调整，下周A股可能也会跟着有个较大的调整，所以计划在周一将原来的卖单止盈，低点重新开单；跟着朋友的节奏，开几张空单"},{"date":"2026-05-30","text":"目前已开仓6月24日，中证500ETF的三个不同执行价【7.75、7.5、7.250】的卖出认沽期权，预计可收入权利金合计2458，中证500目前的价格是8.443，还有10+%的空间，目前这些义务仓收益持平，到6月24日，没有跌破执行价，就能收到权利金，中间如果跌幅较大，浮亏达到权利金的两倍就会止损。\n本周因指数下跌较多，开仓了6月24日的认购期权，就是赌市场反弹，大概1万元左右，目前浮亏3000，如果市场没有反弹，或者反弹太慢，被时间价值损耗掉了，就会形成实际亏损；如果有比较大的反弹，计划收益20%左右止盈。"}]};
+let store = {"navRecords":[{"date":"2026-05-15","marketValue":150000,"nav":1},{"date":"2026-05-22","marketValue":151000,"nav":1.0066666666666666},{"date":"2026-05-29","marketValue":146612.2,"nav":0.9774146666666668},{"date":"2026-06-05","marketValue":149027.4,"nav":0.993516},{"date":"2026-06-12","marketValue":152797.7,"nav":1.0186513333333334},{"date":"2026-06-19","marketValue":154976.8,"nav":1.0331786666666667},{"date":"2026-06-26","marketValue":156870,"nav":1.0458},{"date":"2026-07-03","marketValue":159561.7,"nav":1.0637446666666668},{"date":"2026-07-10","marketValue":162525.5,"nav":1.0835033333333333},{"date":"2026-07-17","marketValue":235452.56,"nav":0.8162970176893299,"injected":150000}],"initScale":150000,"position":{"total":235452.56,"avail":11236.24,"updatedAt":"2026/7/17"},"commentaries":[{"date":"2026-07-17","text":"这是暴击的一周，也是自己真正体验卖方策略风险的一周。之前两个月积累了大约1.3w的利润，在本周的暴跌中全部亏回去，目前还显示浮亏6.5w。\n之前理论上知道卖方亏无限，没想到一天跌6%，期权的波动这么大！更重要的是，自己还是没有遵守卖方的纪律。之前学习的时候总结到，当卖方浮亏是权利金的2倍时，就应该止损，但昨天达到这个标准的时候，还是想着已经跌了3天，总要反弹了吧，继续持有，甚至开了新的空单+买多，今天指数单日下跌5.5%，卖方浮亏直接从2倍奔到了7、8倍！保证金都提示不足了。唉，强平了几张卖单。\n下周如果继续跌，那就只能继续平卖单，同时，市场已经进入【极度恐惧】，卖方平仓后先不再开卖单，短期转买多，相当于分批建仓买入指数了，在反转后尽快将净值追回一点，后续再更新策略，如果将卖方做得更好"},{"date":"2026-07-10","text":"上周三四大跌后，周五开了中证500的buy call（买多），本周一二三指数持续下行，多单亏损，sell put（卖空）的浮盈也降低，导致截至周三的利润只剩下2000元左右，一度觉得买方不能做，就是在赌。好在买方的总亏损是固定的，不会触及本金，所以没有止损，还加仓了几张，同时在周四上午开了科创50的buy call，终于在周四的暴力反弹后，buy call的单子都盈利了，其中科创50一天盈利70%，可惜只买了一张，赚了800+，截至今天，账户净值又创新高。上午将多单都平仓了，锁住了利润，不受下午跳水的影响。整体本周的操作还是比较幸运的。"},{"date":"2026-07-03","text":"买单两次择时正确，贡献了收益；下跌中开了卖单，提高了资金使用率"},{"date":"2026-06-26","text":"本周周三周四大涨后，周五一早平了sell put，提前锁定85%的收益，后续有机会跌了再重新开仓；同时一早开了3张put，赌市场调整，周五大跌，也有所盈利。目前整体的策略就是sell put为主，打安全垫，在胜率比较高的时候在开仓买单。"},{"date":"2026-06-19","text":"借着涨势，提前把sell put获利了结了，然后周二看大涨开了空单，博个下跌，如果没跌期权费合计损失556；同时开了一张sell call，7月没涨过9.75就能收到期权费，作为尝试。牛市行情中，还是以sell put（不看空）为主，目前仓位低，下周行情有下跌，再开仓7月的sell put，sell call慎做，"},{"date":"2026-06-12","text":"本周参与了几笔择时的买单。周一大跌，平了空单微赚，后来又开了多单，结果周一大跌买坑里了。周二反弹，但因在办公室无法操作，错过卖点，周三周四下跌，浮亏较大，周五大涨迎来反转，扭亏为盈，平仓后见涨幅较大，开了空单，下午平了，有所盈利，并在大跌的时候又卖了一张sell put，也微转。整体来说，本周的买单最终都盈利，但中间波动较大，需要多盯盘。后续还是以sell put为主，在没有明确机会   明确方向的时候，宁愿空仓，有比较确定的机会再实弹参与买盘。"},{"date":"2026-06-06","text":"学习：现在大致理解，期权的卖方，收保费，可以大概率收小钱，但是保证金制，只能用到五成仓位，所以算起来年化收益10-15%左右吧，还要预防极端风险，确实跟雪球类似；期权的买方，就是赌方向，但是这个就需要实时盯盘，没有明确观点时候不开买单，宁可空仓。\n本周操作：之前基于牛市逻辑，尝试开了6张买单，权利金一万左右，6月3日趁周中反弹平仓2单，目前权利金6800左右，浮亏5500，大概率持有到6月24日看有没有反弹，否则就是下跌+时间价值损耗亏没；本周跟朋友小仓位尝试买了3单空单，都是次日平仓，两千元左右单日收益均超过10%；之前开的sell put在本周震荡市中逐步吃到时间价值。\n下周计划：美股有了大的调整，下周A股可能也会跟着有个较大的调整，所以计划在周一将原来的卖单止盈，低点重新开单；跟着朋友的节奏，开几张空单"},{"date":"2026-05-30","text":"目前已开仓6月24日，中证500ETF的三个不同执行价【7.75、7.5、7.250】的卖出认沽期权，预计可收入权利金合计2458，中证500目前的价格是8.443，还有10+%的空间，目前这些义务仓收益持平，到6月24日，没有跌破执行价，就能收到权利金，中间如果跌幅较大，浮亏达到权利金的两倍就会止损。\n本周因指数下跌较多，开仓了6月24日的认购期权，就是赌市场反弹，大概1万元左右，目前浮亏3000，如果市场没有反弹，或者反弹太慢，被时间价值损耗掉了，就会形成实际亏损；如果有比较大的反弹，计划收益20%左右止盈。"}]};
 
 if (!store.position) store.position = {};
 if (!store.commentaries) store.commentaries = [];
@@ -307,12 +344,32 @@ function fmtPct(v) {
 function escHtml(str) {
   return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
+function fmtWan(v) {
+  if (v == null || isNaN(v)) return '—';
+  return (v / 10000).toFixed(2) + ' 万';
+}
+function renderCapital() {
+  const init = store.initScale || 0;
+  const injected = (store.navRecords || []).reduce((s, r) => s + (r.injected || 0), 0);
+  const pos = store.position || {};
+  const total = pos.total || (store.navRecords.length ? store.navRecords[store.navRecords.length - 1].marketValue : 0);
+  const totalInvested = init + injected;
+  const recovery = totalInvested ? total / totalInvested : 0;
+  document.getElementById('capInit').textContent = fmtWan(init);
+  document.getElementById('capInjected').textContent = fmtWan(injected);
+  document.getElementById('capTotal').textContent = fmtWan(total);
+  const noteEl = document.getElementById('capTotalNote');
+  if (noteEl) noteEl.textContent = '初始 ' + fmtWan(init) + ' + 追加 ' + fmtWan(injected);
+  document.getElementById('capRecovery').textContent = recovery.toFixed(2);
+  document.getElementById('capRecoveryNote').textContent = '投入 ' + fmtWan(totalInvested) + ' / 当前 ' + fmtWan(total);
+}
 
 // ============================================================
 //  RENDER ALL
 // ============================================================
 function renderAll() {
   renderMetrics();
+  renderCapital();
   renderChart();
   renderPosition();
   renderLatestCommentary();
