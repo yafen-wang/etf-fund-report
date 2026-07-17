@@ -322,16 +322,20 @@
           </div>
           <div class="form-group">
             <label class="form-label">当日总市值（元）</label>
-            <input type="number" id="inputMarketValue" class="form-input" placeholder="如 156870" step="0.01">
+            <input type="number" id="inputMarketValue" class="form-input" placeholder="如 300000" step="0.01">
           </div>
           <div class="form-group">
-            <label class="form-label">初始规模（元）</label>
-            <input type="number" id="inputInitValue" class="form-input" placeholder="首次录入后自动记忆" step="0.01">
+            <label class="form-label">本周追加资金（元）</label>
+            <input type="number" id="inputInjected" class="form-input" placeholder="无追加填 0" step="0.01" value="0">
+          </div>
+          <div class="form-group">
+            <label class="form-label">初始建仓规模（元）</label>
+            <input type="number" id="inputInitValue" class="form-input" placeholder="仅首次录入需要" step="0.01">
           </div>
           <button class="btn-primary" onclick="addNAVRecord()">添加净值</button>
         </div>
         <div style="margin-top:12px; font-size:12px; color:#aaa;">
-          净值 = 当日总市值 ÷ 初始规模。初始规模首次填写后将自动保存，后续无需重复填写。
+          净值采用「单位化」计算：追加资金按当前净值申购新份额，净值曲线连续、不跳变。初始建仓规模仅首次录入时填写；之后追加资金一律填「本周追加资金」，<b style="color:#c0392b;">切勿修改初始建仓规模</b>。
         </div>
       </div>
     </div>
@@ -385,6 +389,7 @@
               <th>日期</th>
               <th>市值（元）</th>
               <th>单位净值</th>
+              <th>追加资金</th>
               <th>涨跌幅</th>
               <th>操作</th>
             </tr>
@@ -511,32 +516,49 @@ function escHtml(str) {
 function addNAVRecord() {
   const date = document.getElementById('inputDate').value;
   const mv = parseFloat(document.getElementById('inputMarketValue').value);
+  const injected = parseFloat(document.getElementById('inputInjected').value) || 0;
   const initStr = document.getElementById('inputInitValue').value;
 
   if (!date) { showToast('请选择日期'); return; }
   if (isNaN(mv) || mv <= 0) { showToast('请输入有效市值'); return; }
+  if (injected < 0) { showToast('追加资金不能为负'); return; }
 
   if (initStr && !isNaN(parseFloat(initStr))) {
     if (!store.initScale) {
       store.initScale = parseFloat(initStr);
     }
   }
-  if (!store.initScale) { showToast('请输入初始规模（首次录入时需要）'); return; }
+  if (!store.initScale) { showToast('请输入初始建仓规模（首次录入时需要）'); return; }
 
-  const nav = mv / store.initScale;
+  // 单位化：上一期份额 = 上一期市值 / 上一期净值；本期份额 = 上期份额 + 追加资金/上期净值
+  // 追加资金按当前净值申购新份额，因此净值曲线连续、不跳变
+  const sorted = [...store.navRecords].sort((a, b) => a.date.localeCompare(b.date));
+  let prev = null;
+  for (const r of sorted) { if (r.date < date) prev = r; else break; }
+
+  let nav;
+  const injVal = prev ? injected : 0; // 首条记录视为建仓，追加资金不计入业绩
+  if (!prev) {
+    nav = mv / store.initScale;
+  } else {
+    const prevUnits = prev.marketValue / prev.nav;
+    const newUnits = prevUnits + injVal / prev.nav;
+    nav = mv / newUnits;
+  }
 
   const idx = store.navRecords.findIndex(r => r.date === date);
   if (idx >= 0) {
-    store.navRecords[idx] = { date, marketValue: mv, nav };
+    store.navRecords[idx] = { date, marketValue: mv, nav, injected: injVal };
     showToast('已更新 ' + date + ' 的净值记录');
   } else {
-    store.navRecords.push({ date, marketValue: mv, nav });
+    store.navRecords.push({ date, marketValue: mv, nav, injected: injVal });
     store.navRecords.sort((a, b) => a.date.localeCompare(b.date));
     showToast('净值记录已添加');
   }
 
   saveStore();
   document.getElementById('inputMarketValue').value = '';
+  document.getElementById('inputInjected').value = '0';
   document.getElementById('inputInitValue').value = '';
   refreshAll();
 }
@@ -775,7 +797,7 @@ function renderNavHistory() {
   const tbody = document.getElementById('navHistoryBody');
   const recs = [...store.navRecords].reverse();
   if (recs.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#ccc;padding:30px;">暂无净值记录</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#ccc;padding:30px;">暂无净值记录</td></tr>';
     return;
   }
   const all = store.navRecords;
@@ -788,7 +810,8 @@ function renderNavHistory() {
       const cls = chg > 0 ? 'change-up' : chg < 0 ? 'change-down' : 'change-zero';
       changeHtml = '<span class="' + cls + '">' + fmtPct(chg) + '</span>';
     }
-    return '<tr><td>' + r.date + '</td><td>' + new Intl.NumberFormat('zh-CN').format(r.marketValue) + '</td><td style="font-weight:500">' + fmtNAV(r.nav) + '</td><td>' + changeHtml + '</td><td><button class="btn-danger" onclick="deleteNAV(\'' + r.date + '\')">删除</button></td></tr>';
+    const inj = (r.injected && r.injected > 0) ? ('<span style="color:#1a3a6b;">+' + new Intl.NumberFormat('zh-CN').format(r.injected) + '</span>') : '—';
+    return '<tr><td>' + r.date + '</td><td>' + new Intl.NumberFormat('zh-CN').format(r.marketValue) + '</td><td style="font-weight:500">' + fmtNAV(r.nav) + '</td><td>' + inj + '</td><td>' + changeHtml + '</td><td><button class="btn-danger" onclick="deleteNAV(\'' + r.date + '\')">删除</button></td></tr>';
   }).join('');
 }
 
